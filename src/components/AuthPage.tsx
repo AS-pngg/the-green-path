@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { User, Mail, Lock, Users, GraduationCap, Shield } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthPageProps {
   onLogin: (userData: any) => void;
@@ -7,6 +9,7 @@ interface AuthPageProps {
 
 const AuthPage = ({ onLogin }: AuthPageProps) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -14,23 +17,106 @@ const AuthPage = ({ onLogin }: AuthPageProps) => {
     age: "",
     className: "",
   });
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In real app, this would connect to Supabase Auth
-    const mockUserData = {
-      id: "1",
-      email: formData.email,
-      role: formData.role,
-      age: formData.age ? parseInt(formData.age) : undefined,
-      className: formData.className,
-      name: formData.email.split("@")[0],
-      carbonFootprint: 750,
-      currentLevel: 2,
-      achievements: 3,
-      points: 1250,
-    };
-    onLogin(mockUserData);
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        // Login existing user
+        const { error } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+
+        if (error) {
+          toast({
+            title: "Login failed",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        toast({
+          title: "Welcome back!",
+          description: "Successfully logged in.",
+        });
+      } else {
+        // Sign up new user
+        const { data, error } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              role: formData.role,
+              age: formData.age ? parseInt(formData.age) : null,
+              class_name: formData.className,
+            },
+          },
+        });
+
+        if (error) {
+          toast({
+            title: "Sign up failed",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (data.user && !data.session) {
+          toast({
+            title: "Check your email",
+            description: "Please check your email for a confirmation link.",
+          });
+        } else {
+          toast({
+            title: "Account created!",
+            description: "Welcome to The Green Path.",
+          });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (error) {
+        toast({
+          title: "Google login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to login with Google. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getDifficultyFromAge = (age: number) => {
@@ -191,22 +277,30 @@ const AuthPage = ({ onLogin }: AuthPageProps) => {
             )}
 
             {/* Submit Button */}
-            <button type="submit" className="btn-pixel w-full">
-              {isLogin ? "LOGIN" : "CREATE ACCOUNT"}
+            <button 
+              type="submit" 
+              className="btn-pixel w-full" 
+              disabled={loading}
+            >
+              {loading ? "LOADING..." : (isLogin ? "LOGIN" : "CREATE ACCOUNT")}
             </button>
 
             {/* Google Login */}
-            <button type="button" className="btn-pixel-secondary w-full flex items-center justify-center gap-2">
+            <button 
+              type="button" 
+              className="btn-pixel-secondary w-full flex items-center justify-center gap-2"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+            >
               <span>🔍</span>
               CONTINUE WITH GOOGLE
             </button>
           </form>
 
-          {/* Supabase Integration Notice */}
+          {/* Authentication Info */}
           <div className="mt-6 bg-muted p-3 border border-border">
             <p className="font-pixel text-[10px] text-muted-foreground leading-relaxed">
-              ⚠️ DEMO MODE: To enable real authentication, database, and all backend features, 
-              connect this project to Supabase using the green button in the top right!
+              ✅ Real authentication enabled! Create an account or login to access all features.
             </p>
           </div>
         </div>

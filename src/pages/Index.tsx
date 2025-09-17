@@ -1,34 +1,116 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 import Navigation from "../components/Navigation";
 import AuthPage from "../components/AuthPage";
 import StudentDashboard from "../components/StudentDashboard";
 import LevelsPage from "../components/LevelsPage";
 import VirtualCityPage from "../components/VirtualCityPage";
+import { useToast } from "@/hooks/use-toast";
 
-interface User {
+interface UserProfile {
   id: string;
   email: string;
   role: "student" | "teacher" | "admin";
-  name: string;
-  carbonFootprint: number;
-  currentLevel: number;
-  achievements: number;
-  points: number;
   age?: number;
-  className?: string;
+  class_name?: string;
+  difficulty_level?: "easy" | "medium" | "hard" | "expert";
 }
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState("home");
+  const { toast } = useToast();
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch user profile
+          setTimeout(async () => {
+            await fetchUserProfile(session.user.id);
+          }, 0);
+        } else {
+          setUserProfile(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Profile doesn't exist, create one
+          await createUserProfile(userId);
+        } else {
+          console.error('Error fetching profile:', error);
+        }
+        return;
+      }
+
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  const createUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: user?.email || '',
+          role: 'student',
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating profile:', error);
+        return;
+      }
+
+      setUserProfile(data);
+    } catch (error) {
+      console.error('Error creating profile:', error);
+    }
+  };
+
+  const handleLogin = (userData: any) => {
+    // This is called from AuthPage but auth state is handled by useEffect
     setCurrentPage("home");
   };
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentPage("home");
   };
 
@@ -37,8 +119,24 @@ const Index = () => {
     // In real app, this would navigate to level details or quiz
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="card-pixel text-center">
+          <h1 className="font-pixel text-xl text-foreground mb-4">
+            🌱 THE GREEN PATH
+          </h1>
+          <p className="font-pixel text-sm text-muted-foreground">
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // Not logged in - show auth page
-  if (!user) {
+  if (!user || !userProfile) {
     return <AuthPage onLogin={handleLogin} />;
   }
 
@@ -46,14 +144,14 @@ const Index = () => {
   const renderCurrentPage = () => {
     switch (currentPage) {
       case "home":
-        if (user.role === "student") {
+        if (userProfile.role === "student") {
           return (
             <StudentDashboard
               studentData={{
-                name: user.name,
-                currentLevel: user.currentLevel,
-                carbonFootprint: user.carbonFootprint,
-                achievements: user.achievements,
+                name: user.email?.split("@")[0] || "Student",
+                currentLevel: 2,
+                carbonFootprint: 750,
+                achievements: 3,
                 totalQuests: 5,
                 completedQuests: 2,
                 disasterAlerts: 1,
@@ -68,10 +166,10 @@ const Index = () => {
             <div className="max-w-4xl mx-auto">
               <div className="card-pixel text-center">
                 <h1 className="font-pixel text-xl text-foreground mb-4">
-                  👋 Welcome, {user.name}!
+                  👋 Welcome, {user.email?.split("@")[0]}!
                 </h1>
                 <p className="font-pixel text-sm text-muted-foreground mb-6">
-                  {user.role.toUpperCase()} DASHBOARD
+                  {userProfile.role.toUpperCase()} DASHBOARD
                 </p>
                 <p className="font-pixel text-xs text-muted-foreground">
                   Teacher and Admin dashboards coming soon!<br/>
@@ -85,14 +183,14 @@ const Index = () => {
       case "levels":
         return (
           <LevelsPage
-            userLevel={user.currentLevel}
+            userLevel={2}
             onStartLevel={handleStartLevel}
           />
         );
 
       case "city":
         return (
-          <VirtualCityPage userPoints={user.points} />
+          <VirtualCityPage userPoints={1250} />
         );
 
       case "quests":
@@ -198,7 +296,8 @@ const Index = () => {
       <Navigation
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        userRole={user.role}
+        userRole={userProfile.role}
+        onLogout={handleLogout}
       />
       {renderCurrentPage()}
     </div>

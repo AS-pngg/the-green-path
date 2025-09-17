@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Home, BookOpen, Building2, Target, Trophy, MessageSquare, Zap, User } from "lucide-react";
+import { Home, BookOpen, Building2, Target, Trophy, MessageSquare, Zap, User, LogOut } from "lucide-react";
 
 interface NavigationProps {
   currentPage: string;
   onPageChange: (page: string) => void;
   userRole?: "student" | "teacher" | "admin";
+  onLogout?: () => void;
 }
 
-const Navigation = ({ currentPage, onPageChange, userRole = "student" }: NavigationProps) => {
+const Navigation = ({ currentPage, onPageChange, userRole = "student", onLogout }: NavigationProps) => {
   const navigationItems = [
     { id: "home", label: "Home", icon: Home },
     { id: "levels", label: "Levels", icon: BookOpen },
@@ -26,8 +27,20 @@ const Navigation = ({ currentPage, onPageChange, userRole = "student" }: Navigat
           <h1 className="font-pixel text-xl text-pixel-forest">
             🌱 THE GREEN PATH
           </h1>
-          <div className="font-pixel text-xs text-muted-foreground">
-            {userRole.toUpperCase()}
+          <div className="flex items-center gap-4">
+            <div className="font-pixel text-xs text-muted-foreground">
+              {userRole.toUpperCase()}
+            </div>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="nav-pixel flex items-center gap-1 p-2"
+                title="Logout"
+              >
+                <LogOut size={16} />
+                <span className="font-pixel text-[10px] hidden sm:block">LOGOUT</span>
+              </button>
+            )}
           </div>
         </div>
         
