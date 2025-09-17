@@ -4,7 +4,6 @@ import AuthPage from "../components/AuthPage";
 import StudentDashboard from "../components/StudentDashboard";
 import LevelsPage from "../components/LevelsPage";
 import VirtualCityPage from "../components/VirtualCityPage";
-import LandingPage from "../components/LandingPage";
 
 interface User {
   id: string;
@@ -22,33 +21,21 @@ interface User {
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentPage, setCurrentPage] = useState("home");
-  const [showLanding, setShowLanding] = useState(true);
 
   const handleLogin = (userData: User) => {
     setUser(userData);
     setCurrentPage("home");
-    setShowLanding(false);
-  };
-
-  const handleGetStarted = () => {
-    setShowLanding(false);
   };
 
   const handleLogout = () => {
     setUser(null);
     setCurrentPage("home");
-    setShowLanding(true);
   };
 
   const handleStartLevel = (levelId: number) => {
     console.log(`Starting level ${levelId}`);
     // In real app, this would navigate to level details or quiz
   };
-
-  // Show landing page first
-  if (showLanding) {
-    return <LandingPage onGetStarted={handleGetStarted} />;
-  }
 
   // Not logged in - show auth page
   if (!user) {
