@@ -29,6 +29,14 @@
     --pixel-danger: 0 75% 55%;
     --pixel-success: 120 70% 45%;
     
+    /* Landing Page Pixel Colors */
+    --pixel-cloud: 0 0% 90%;
+    --pixel-mountain: 240 14% 20%;
+    --pixel-tree: 120 60% 25%;
+    --pixel-leaf: 35 81% 42%;
+    --pixel-light: 0 0% 98%;
+    --pixel-dark: 240 14% 10%;
+    
     /* Base System Colors */
     --background: 120 25% 8%;
     --foreground: 120 15% 95%;
@@ -246,6 +254,11 @@
     @apply border-2 border-solid;
     border-color: hsl(var(--pixel-sky));
     background: hsl(var(--pixel-sky) / 0.2);
+  }
+  
+  /* Landing Page Specific Styles */
+  .rounded-pixel {
+    border-radius: 2px;
   }
 }
 

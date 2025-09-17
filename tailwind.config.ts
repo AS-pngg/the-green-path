@@ -74,6 +74,12 @@ export default {
           warning: "hsl(var(--pixel-warning))",
           danger: "hsl(var(--pixel-danger))",
           success: "hsl(var(--pixel-success))",
+          cloud: "hsl(var(--pixel-cloud))",
+          mountain: "hsl(var(--pixel-mountain))",
+          tree: "hsl(var(--pixel-tree))",
+          leaf: "hsl(var(--pixel-leaf))",
+          light: "hsl(var(--pixel-light))",
+          dark: "hsl(var(--pixel-dark))",
         },
         carbon: {
           excellent: "hsl(var(--carbon-excellent))",
